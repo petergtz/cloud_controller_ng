@@ -50,14 +50,25 @@ module VCAP::CloudController
         end
 
         @workpool.drain
-      rescue CloudController::Errors::ApiError => e
-        if e.name == 'RunnerInvalidRequest'
-          logger.info('synced-invalid-desired-lrps', error: e.name, error_message: e.message)
-        else
-          logger.info('sync-failed', error: e.name, error_message: e.message)
-          bump_freshness = false
-          raise BBSFetchError.new(e.message)
+
+        first_exception = nil
+        @workpool.exceptions.each do |e|
+          error_name = e.is_a?(CloudController::Errors::ApiError) ? e.name : e.class.name
+          if error_name == 'RunnerInvalidRequest'
+            logger.info('synced-invalid-desired-lrps', error: error_name, error_message: e.message)
+          else
+            logger.error('error-updating-lrp-state', error: error_name, error_message: e.message)
+            first_exception ||= e
+          end
+          # if e.name == 'ResourceAlreadyExists'
+          #   logger.info('blah blah', error: e.name, error_message: e.message)
         end
+        raise first_exception if first_exception
+      rescue => e
+        error_name = e.is_a?(CloudController::Errors::ApiError) ? e.name : e.class.name
+        logger.info('sync-failed', error: error_name, error_message: e.message)
+        bump_freshness = false
+        raise BBSFetchError.new(e.message)
       ensure
         if bump_freshness
           bbs_apps_client.bump_freshness
@@ -82,12 +93,12 @@ module VCAP::CloudController
 
       def processes(last_id)
         processes = ProcessModel.
-                    diego.
-                    runnable.
-                    where("#{ProcessModel.table_name}.id > ?", last_id).
-                    order("#{ProcessModel.table_name}__id".to_sym).
-                    eager(:current_droplet, :space, :service_bindings, { routes: :domain }, { app: :buildpack_lifecycle_data }).
-                    limit(BATCH_SIZE)
+          diego.
+          runnable.
+          where("#{ProcessModel.table_name}.id > ?", last_id).
+          order("#{ProcessModel.table_name}__id".to_sym).
+          eager(:current_droplet, :space, :service_bindings, { routes: :domain }, { app: :buildpack_lifecycle_data }).
+          limit(BATCH_SIZE)
 
         processes = processes.buildpack_type unless FeatureFlag.enabled?(:diego_docker)
 

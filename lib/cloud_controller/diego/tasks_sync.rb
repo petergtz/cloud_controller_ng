@@ -46,12 +46,16 @@ module VCAP::CloudController
         end
 
         @workpool.drain
+        raise @workpool.exceptions.first if @workpool.exceptions.any?
 
         bbs_task_client.bump_freshness
         logger.info('finished-task-sync')
       rescue CloudController::Errors::ApiError => e
         logger.info('sync-failed', error: e.message)
         raise BBSFetchError.new(e.message)
+      # rescue => e
+      #   logger.info('sync-failed', error: e.message)
+      #   raise
       end
 
       private
