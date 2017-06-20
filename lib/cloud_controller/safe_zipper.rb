@@ -37,7 +37,21 @@ class SafeZipper
   private
 
   def unzip
-    @unzip ||= `unzip -qq -: -d #{Shellwords.escape(@zip_destination)} #{Shellwords.escape(@zip_path)}`
+    # @unzip ||= `unzip -qq -: -d #{Shellwords.escape(@zip_destination)} #{Shellwords.escape(@zip_path)}`
+    jobs_dir = File.dirname(File.dirname(VCAP::CloudController::Config.config['runtimes_files']))
+    raise CloudController::Errors::ApiError.new_from_details('AppBitsUploadInvalid', 'no config for runtimes_files') unless jobs_dir
+    safe_unzip_wrapper = File.join(jobs_dir, 'bin', 'safe_unzipper')
+    raise CloudController::Errors::ApiError.new_from_details('AppPackageInvalid', 'safe unzipper does not exist') unless File.exist?(safe_unzip_wrapper)
+
+    if !@unzip
+      output, error, status = Open3.capture3(%(safe_unzip_wrapper -d #{Shellwords.escape(@zip_destination)} -f #{Shellwords.escape(@zip_path)}))
+      unless status.success?
+        raise CloudController::Errors::ApiError.new_from_details('AppBitsUploadInvalid',
+          "Unzipping had errors\n STDOUT: \"#{output}\"\n STDERR: \"#{error}\"")
+      end
+      @unzip = output
+    end
+    @unzip
   end
 
   def zip

@@ -12,10 +12,13 @@ module CloudController
           unzip_path = File.join(root_path, UNCOMPRESSED_DIR)
           FileUtils.mkdir(unzip_path)
           storage_size = 0
+          out_root_path = File.join(root_path, 'extracted')
+          FileUtils.mkdir(compressed_bits_path, out_root_path) unless File.exists? out_root_path
           if compressed_bits_path && File.exist?(compressed_bits_path)
-            storage_size = SafeZipper.unzip(compressed_bits_path, unzip_path)
+            FileUtils.cp(compressed_bits_path, root_path)
+            storage_size = SafeZipper.unzip(compressed_bits_path, out_root_path)
           end
-          block.yield new(root_path, storage_size)
+          block.yield new(out_root_path, storage_size)
         end
       end
 

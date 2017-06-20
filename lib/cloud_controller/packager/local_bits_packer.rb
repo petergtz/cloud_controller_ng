@@ -39,7 +39,7 @@ module CloudController
       end
 
       def tmp_dir
-        @tmp_dir ||= VCAP::CloudController::Config.config[:directories][:tmpdir]
+        @tmp_dir ||= Dir.mktmpdir(File.join(VCAP::CloudController::Config.config[:directories][:tmpdir]))
       end
 
       def package_blobstore
