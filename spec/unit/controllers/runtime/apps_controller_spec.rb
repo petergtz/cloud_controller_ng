@@ -1623,7 +1623,7 @@ module VCAP::CloudController
 
         it 'returns X-App-Staging-Log header with staging log url' do
           put "/v2/apps/#{app_obj.guid}", MultiJson.dump(state: 'STARTED')
-          expect(last_response.status).to eq(201)
+          expect(last_response.status).to eq(201), last_response.body
           expect(last_response.headers['X-App-Staging-Log']).to eq('streaming-log-url')
         end
       end

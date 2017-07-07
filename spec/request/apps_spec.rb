@@ -160,7 +160,7 @@ RSpec.describe 'Apps' do
 
       app_model1 = VCAP::CloudController::AppModel.make(name: 'name1', space: space, desired_state: 'STOPPED')
       app_model1.lifecycle_data.update(
-        buildpack: buildpack.name,
+        buildpacks: [buildpack.name],
         stack:     stack.name
       )
 
@@ -382,7 +382,7 @@ RSpec.describe 'Apps' do
         environment_variables: { 'unicorn' => 'horn' },
         droplet_guid:          'a-droplet-guid'
       )
-      app_model.lifecycle_data.buildpack = buildpack.name
+      app_model.lifecycle_data.buildpacks = [buildpack.name]
       app_model.lifecycle_data.stack     = stack.name
       app_model.lifecycle_data.save
       app_model.add_process(VCAP::CloudController::App.make(instances: 1))
@@ -629,7 +629,7 @@ RSpec.describe 'Apps' do
         desired_state: 'STOPPED',
       )
 
-      app_model.lifecycle_data.buildpack = 'http://example.com/git'
+      app_model.lifecycle_data.buildpacks = ['http://example.com/git']
       app_model.lifecycle_data.stack     = stack.name
       app_model.lifecycle_data.save
 
@@ -695,7 +695,7 @@ RSpec.describe 'Apps' do
         desired_state: 'STARTED',
       )
 
-      app_model.lifecycle_data.buildpack = 'http://example.com/git'
+      app_model.lifecycle_data.buildpacks = ['http://example.com/git']
       app_model.lifecycle_data.stack     = stack.name
       app_model.lifecycle_data.save
 
@@ -773,7 +773,7 @@ RSpec.describe 'Apps' do
     let(:app_guid) { droplet_model.app_guid }
 
     before do
-      droplet_model.buildpack_lifecycle_data.update(buildpack: 'http://buildpack.git.url.com', stack: 'stack-name')
+      droplet_model.buildpack_lifecycle_data.update(buildpacks: ['http://buildpack.git.url.com'], stack: 'stack-name')
       app_model.droplet_guid = droplet_model.guid
       app_model.save
     end
@@ -816,7 +816,7 @@ RSpec.describe 'Apps' do
     let(:app_guid) { droplet_model.app_guid }
 
     before do
-      droplet_model.buildpack_lifecycle_data.update(buildpack: 'http://buildpack.git.url.com', stack: 'stack-name')
+      droplet_model.buildpack_lifecycle_data.update(buildpacks: ['http://buildpack.git.url.com'], stack: 'stack-name')
       app_model.droplet_guid = droplet_model.guid
       app_model.save
     end
@@ -865,7 +865,7 @@ RSpec.describe 'Apps' do
     end
 
     before do
-      app_model.lifecycle_data.buildpack = 'http://example.com/git'
+      app_model.lifecycle_data.buildpacks = ['http://example.com/git']
       app_model.lifecycle_data.stack     = stack.name
       app_model.lifecycle_data.save
     end

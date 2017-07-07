@@ -395,8 +395,13 @@ module VCAP::CloudController
   end
 
   BuildpackLifecycleDataModel.blueprint do
-    buildpack { nil }
+    buildpacks { nil }
     stack { Stack.make.name }
+  end
+
+  BuildpackLifecycleBuildpackModel.blueprint do
+    admin_buildpack_name { 'ruby' }
+    buildpack_url { nil }
   end
 
   AppUsageEvent.blueprint do

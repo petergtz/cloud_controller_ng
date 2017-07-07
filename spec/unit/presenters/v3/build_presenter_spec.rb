@@ -17,7 +17,7 @@ module VCAP::CloudController::Presenters::V3
         created_by_user_email: 'this user emailed in'
       )
     end
-    let!(:lifecycle_data) { VCAP::CloudController::BuildpackLifecycleDataModel.make(buildpack: [buildpack], stack: stack, build: build) }
+    let!(:lifecycle_data) { VCAP::CloudController::BuildpackLifecycleDataModel.make(buildpacks: Array(buildpack), stack: stack, build: build) }
 
     describe '#to_hash' do
       let(:result) { BuildPresenter.new(build).to_hash }
