@@ -9,6 +9,85 @@ RSpec.describe SafeZipper do
     end
   end
 
+  describe '.append_cached_resources' do
+    let(:base_zip_path) { File.expand_path('../../fixtures/good.zip', File.dirname(__FILE__)) }
+    let(:additional_files_path) { File.expand_path('../../fixtures/fake_package/', File.dirname(__FILE__)) }
+    let(:output_zip_destination) { File.join(@tmpdir, 'package.zip') }
+
+    it 'adds the files to an existing zip' do
+      SafeZipper.append_cached_resources(base_zip_path, additional_files_path, output_zip_destination)
+
+      output = `zipinfo #{output_zip_destination}`
+
+      expect(output).not_to include './'
+      expect(output).not_to include 'fake_package'
+
+      expect(output).to match /^l.+coming_from_inside$/
+      expect(output).to include 'here.txt'
+      expect(output).to include 'subdir/'
+      expect(output).to include 'subdir/there.txt'
+
+      expect(output).to include 'bye'
+      expect(output).to include 'hi'
+      expect(output).to include 'subdir/'
+      expect(output).to include 'subdir/greetings'
+
+      expect(output).to include '7 files'
+    end
+
+    context 'when there are no additional files' do
+      let(:additional_files_path) { File.join(@tmpdir, 'empty') }
+
+      it 'results in the existing zip' do
+        Dir.mkdir(additional_files_path)
+        SafeZipper.append_cached_resources(base_zip_path, additional_files_path, output_zip_destination)
+
+        output = `zipinfo #{output_zip_destination}`
+
+        expect(output).to include 'bye'
+        expect(output).to include 'hi'
+        expect(output).to include 'subdir/'
+        expect(output).to include 'subdir/greeting'
+
+        expect(output).to include '4 files'
+      end
+    end
+  end
+
+  describe '.unzip_for_blobstore' do
+    let(:zip_path) { File.expand_path('../../fixtures/good.zip', File.dirname(__FILE__)) }
+    let(:zip_destination) { @tmpdir }
+
+    it 'unzips the file but does NOT preserve directory structure' do
+      SafeZipper.unzip_for_blobstore(zip_path, zip_destination)
+
+      files = (Dir.entries(zip_destination) - %w(.. .))
+      expect(files).to include 'bye'
+      expect(files).to include 'hi'
+      expect(files).to include 'greetings'
+    end
+
+    context 'when the underlying unzip fails' do
+      let(:zip_path) { File.expand_path('../../fixtures/missing.zip', File.dirname(__FILE__)) }
+
+      it 'raises an exception' do
+        expect { SafeZipper.unzip_for_blobstore(zip_path, zip_destination) }.to raise_exception CloudController::Errors::ApiError, /unzipping had errors\n STDOUT: ""\n STDERR: "unzip:\s+cannot find or open/im
+      end
+    end
+
+    context 'when there are multiple files with the same name in the zip archive' do
+      let(:zip_path) { File.expand_path('../../fixtures/tworeadmes.zip', File.dirname(__FILE__)) }
+
+      it 'unzips the file' do
+        SafeZipper.unzip_for_blobstore(zip_path, zip_destination)
+
+        files = (Dir.entries(zip_destination) - %w(.. .))
+        expect(files).to include 'README'
+        expect(files.length).to eq 1
+      end
+    end
+  end
+
   describe '.unzip' do
     let(:zip_path) { File.expand_path('../../fixtures/good.zip', File.dirname(__FILE__)) }
     let(:zip_destination) { @tmpdir }

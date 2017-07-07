@@ -29,6 +29,8 @@ module CloudController::Packager
       allow(packer).to receive(:global_app_bits_cache).and_return(global_app_bits_cache)
       allow(packer).to receive(:max_package_size).and_return(max_package_size)
 
+      FileUtils.chmod(0400, uploaded_files_path)
+
       Fog.unmock!
     end
 
@@ -64,34 +66,26 @@ module CloudController::Packager
       end
 
       context 'when the zip file uploaded is invalid' do
-        let(:uploaded_files_path) { File.expand_path('../../../fixtures/bad.zip', File.dirname(__FILE__)) }
+        let(:uploaded_files_path) { File.expand_path('../../../../fixtures/bad.zip', File.dirname(__FILE__)) }
 
         it 'raises an informative error' do
-          expect { packer.send_package_to_blobstore(blobstore_key, uploaded_files_path, cached_files_fingerprints) }.to raise_error(CloudController::Errors::ApiError, /invalid/)
+          expect {
+            packer.send_package_to_blobstore(blobstore_key, uploaded_files_path, cached_files_fingerprints)
+          }.to raise_error(CloudController::Errors::ApiError, /invalid/)
         end
       end
 
       context 'when the app bits are too large' do
-        let(:max_package_size) { 10 }
+        let(:max_package_size) { 10_000 }
+
+        before do
+          allow_any_instance_of(SafeZipper).to receive(:size).and_return(10_001)
+        end
 
         it 'raises an exception' do
           expect {
             packer.send_package_to_blobstore(blobstore_key, uploaded_files_path, cached_files_fingerprints)
           }.to raise_error(CloudController::Errors::ApiError, /may not be larger than/)
-        end
-
-        context 'because the cached files make the package too large' do
-          let(:max_package_size) { 10_000 }
-
-          before do
-            allow_any_instance_of(CloudController::Blobstore::FingerprintsCollection).to receive(:storage_size).and_return(10_000)
-          end
-
-          it 'raises an exception' do
-            expect {
-              packer.send_package_to_blobstore(blobstore_key, uploaded_files_path, cached_files_fingerprints)
-            }.to raise_error(CloudController::Errors::ApiError, /may not be larger than/)
-          end
         end
       end
 
