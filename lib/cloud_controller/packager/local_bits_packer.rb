@@ -1,6 +1,6 @@
 require 'cloud_controller/blobstore/fingerprints_collection'
 require 'shellwords'
-require 'cloud_controller/safe_zipper'
+require 'cloud_controller/app_packager'
 
 module CloudController
   module Packager
@@ -10,30 +10,27 @@ module CloudController
 
         FileUtils.chmod('u+w', uploaded_package_zip)
 
-        Dir.mktmpdir('safezipper', tmp_dir) do |root_path|
-          workspace = File.join(root_path, 'workspace')
-          FileUtils.mkdir(workspace)
+        Dir.mktmpdir('local_bits_packer', tmp_dir) do |root_path|
+          app_packager = AppPackager.new(uploaded_package_zip)
 
           # unzip app contents & upload to blobstore
           app_contents_path = File.join(root_path, 'application_contents')
-          SafeZipper.unzip_for_blobstore(uploaded_package_zip, app_contents_path)
+          FileUtils.mkdir(app_contents_path)
+          app_packager.unzip(app_contents_path)
           global_app_bits_cache.cp_r_to_blobstore(app_contents_path)
 
-          # download cached resources from blobstore
+          # download & append cached resources from blobstore
+          cached_resources_dir = File.join(root_path, 'cached_resources_dir')
+          FileUtils.mkdir(cached_resources_dir)
           matched_resources.each do |local_destination, file_sha, mode|
-            global_app_bits_cache.download_from_blobstore(file_sha, File.join(workspace, local_destination), mode: mode)
+            global_app_bits_cache.download_from_blobstore(file_sha, File.join(cached_resources_dir, local_destination), mode: mode)
           end
+          app_packager.append_dir_contents(cached_resources_dir)
 
-          # append cached resources to app.zip
-          complete_app_zip = File.join(root_path, 'package.zip')
-          SafeZipper.append_cached_resources(uploaded_package_zip, workspace, complete_app_zip)
-
-          # fix up zip?
           destination_zip = File.join(root_path, 'final.zip')
-          FileUtils.cp(complete_app_zip, destination_zip)
-          SafeZipper.fix_zip_subdir_permissions(complete_app_zip, destination_zip)
+          app_packager.fix_subdir_permissions(destination_zip)
 
-          validate_size!(destination_zip)
+          validate_size!(app_packager)
 
           package_blobstore.cp_to_blobstore(destination_zip, blobstore_key)
 
@@ -46,11 +43,10 @@ module CloudController
 
       private
 
-      def validate_size!(uploaded_package_zip)
+      def validate_size!(app_packager)
         return unless max_package_size
 
-        total_size = SafeZipper.new(uploaded_package_zip, '').size
-        if total_size > max_package_size
+        if app_packager.size > max_package_size
           raise CloudController::Errors::ApiError.new_from_details('AppPackageInvalid', "Package may not be larger than #{max_package_size} bytes")
         end
       end

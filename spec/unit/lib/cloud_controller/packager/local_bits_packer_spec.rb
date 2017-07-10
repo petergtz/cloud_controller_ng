@@ -5,7 +5,8 @@ module CloudController::Packager
   RSpec.describe LocalBitsPacker do
     subject(:packer) { described_class.new }
 
-    let(:uploaded_files_path) { File.expand_path('../../../../fixtures/good.zip', File.dirname(__FILE__)) }
+    let(:uploaded_files_path) { File.join(local_tmp_dir, 'good.zip') }
+    let(:input_zip) { File.join(Paths::FIXTURES, 'good.zip') }
     let(:blobstore_dir) { Dir.mktmpdir }
     let(:local_tmp_dir) { Dir.mktmpdir }
     let(:global_app_bits_cache) do
@@ -29,6 +30,7 @@ module CloudController::Packager
       allow(packer).to receive(:global_app_bits_cache).and_return(global_app_bits_cache)
       allow(packer).to receive(:max_package_size).and_return(max_package_size)
 
+      FileUtils.cp(input_zip, local_tmp_dir)
       FileUtils.chmod(0400, uploaded_files_path)
 
       Fog.unmock!
@@ -66,7 +68,8 @@ module CloudController::Packager
       end
 
       context 'when the zip file uploaded is invalid' do
-        let(:uploaded_files_path) { File.expand_path('../../../../fixtures/bad.zip', File.dirname(__FILE__)) }
+        let(:input_zip) { File.join(Paths::FIXTURES, 'bad.zip') }
+        let(:uploaded_files_path) { File.join(local_tmp_dir, 'bad.zip') }
 
         it 'raises an informative error' do
           expect {
@@ -76,11 +79,7 @@ module CloudController::Packager
       end
 
       context 'when the app bits are too large' do
-        let(:max_package_size) { 10_000 }
-
-        before do
-          allow_any_instance_of(SafeZipper).to receive(:size).and_return(10_001)
-        end
+        let(:max_package_size) { 1 }
 
         it 'raises an exception' do
           expect {
