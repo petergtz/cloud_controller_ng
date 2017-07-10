@@ -505,7 +505,7 @@ module VCAP::CloudController
     end
 
     def buildpack
-      app.lifecycle_data.buildpacks.first
+      app.lifecycle_data.buildpack_models.first
     end
 
     def buildpack_specified?

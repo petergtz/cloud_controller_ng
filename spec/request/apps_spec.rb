@@ -383,7 +383,7 @@ RSpec.describe 'Apps' do
         droplet_guid:          'a-droplet-guid'
       )
       app_model.lifecycle_data.buildpacks = [buildpack.name]
-      app_model.lifecycle_data.stack     = stack.name
+      app_model.lifecycle_data.stack = stack.name
       app_model.lifecycle_data.save
       app_model.add_process(VCAP::CloudController::App.make(instances: 1))
       app_model.add_process(VCAP::CloudController::App.make(instances: 2))
@@ -630,7 +630,7 @@ RSpec.describe 'Apps' do
       )
 
       app_model.lifecycle_data.buildpacks = ['http://example.com/git']
-      app_model.lifecycle_data.stack     = stack.name
+      app_model.lifecycle_data.stack = stack.name
       app_model.lifecycle_data.save
 
       droplet           = VCAP::CloudController::DropletModel.make(:buildpack, app: app_model, state: VCAP::CloudController::DropletModel::STAGED_STATE)
@@ -696,7 +696,7 @@ RSpec.describe 'Apps' do
       )
 
       app_model.lifecycle_data.buildpacks = ['http://example.com/git']
-      app_model.lifecycle_data.stack     = stack.name
+      app_model.lifecycle_data.stack = stack.name
       app_model.lifecycle_data.save
 
       droplet           = VCAP::CloudController::DropletModel.make(:buildpack, app: app_model, state: VCAP::CloudController::DropletModel::STAGED_STATE)
@@ -866,7 +866,7 @@ RSpec.describe 'Apps' do
 
     before do
       app_model.lifecycle_data.buildpacks = ['http://example.com/git']
-      app_model.lifecycle_data.stack     = stack.name
+      app_model.lifecycle_data.stack = stack.name
       app_model.lifecycle_data.save
     end
 

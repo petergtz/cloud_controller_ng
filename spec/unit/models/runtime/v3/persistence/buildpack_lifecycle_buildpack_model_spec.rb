@@ -5,6 +5,7 @@ module VCAP::CloudController
     subject(:buildpack) { BuildpackLifecycleBuildpackModel.new }
 
     it_behaves_like 'a model with an encrypted attribute' do
+      let(:model_factory) { -> { BuildpackLifecycleBuildpackModel.make(:custom_buildpack) } }
       let(:value_to_encrypt) { 'https://acme-buildpack.com' }
       let(:encrypted_attr) { :buildpack_url }
       let(:storage_column) { :encrypted_buildpack_url }
@@ -21,7 +22,7 @@ module VCAP::CloudController
       end
       it 'expects doubly set buildpack buildpacks to be invalid' do
         buildpack.admin_buildpack_name = 'ruby'
-        buildpack.buildpack_url= 'http://foo.org/ruby'
+        buildpack.buildpack_url = 'http://foo.org/ruby'
         expect(buildpack.valid?).to be_falsey
       end
     end

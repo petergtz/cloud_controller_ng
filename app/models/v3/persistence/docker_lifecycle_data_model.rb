@@ -12,6 +12,10 @@ module VCAP::CloudController
       []
     end
 
+    def buildpack_models
+      []
+    end
+
     def using_custom_buildpack?
       false
     end

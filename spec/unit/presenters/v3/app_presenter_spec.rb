@@ -12,7 +12,7 @@ module VCAP::CloudController::Presenters::V3
 
     before do
       app.lifecycle_data.update(
-        buildpack: 'git://user:pass@github.com/repo',
+        buildpacks: ['git://user:pass@github.com/repo'],
         stack: 'the-happiest-stack',
       )
     end

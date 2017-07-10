@@ -404,6 +404,11 @@ module VCAP::CloudController
     buildpack_url { nil }
   end
 
+  BuildpackLifecycleBuildpackModel.blueprint(:custom_buildpack) do
+    admin_buildpack_name { nil }
+    buildpack_url { 'http://example.com/temporary' }
+  end
+
   AppUsageEvent.blueprint do
     state { 'STARTED' }
     package_state { 'STAGED' }

@@ -8,27 +8,27 @@ module VCAP::CloudController
     encrypt :buildpack_url, salt: :encrypted_buildpack_url_salt, column: :encrypted_buildpack_url
 
     many_to_one :droplet,
-      class:                   '::VCAP::CloudController::DropletModel',
-      key:                     :droplet_guid,
-      primary_key:             :guid,
+      class: '::VCAP::CloudController::DropletModel',
+      key: :droplet_guid,
+      primary_key: :guid,
       without_guid_generation: true
 
     many_to_one :build,
-      class:                   '::VCAP::CloudController::BuildModel',
-      key:                     :build_guid,
-      primary_key:             :guid,
+      class: '::VCAP::CloudController::BuildModel',
+      key: :build_guid,
+      primary_key: :guid,
       without_guid_generation: true
 
     many_to_one :app,
-      class:                   '::VCAP::CloudController::AppModel',
-      key:                     :app_guid,
-      primary_key:             :guid,
+      class: '::VCAP::CloudController::AppModel',
+      key: :app_guid,
+      primary_key: :guid,
       without_guid_generation: true
 
     one_to_many :buildpack_lifecycle_buildpacks,
-      class:                   '::VCAP::CloudController::BuildpackLifecycleBuildpackModel',
-      key:                     :buildpack_lifecycle_data_guid,
-      primary_key:             :guid
+      class: '::VCAP::CloudController::BuildpackLifecycleBuildpackModel',
+      key: :buildpack_lifecycle_data_guid,
+      primary_key: :guid
     plugin :nested_attributes
     nested_attributes :buildpack_lifecycle_buildpacks, destroy: true
     add_association_dependencies buildpack_lifecycle_buildpacks: :destroy
@@ -63,6 +63,16 @@ module VCAP::CloudController
       else
         legacy_buildpack_name = self.legacy_admin_buildpack_name || self.legacy_buildpack_url
         Array(legacy_buildpack_name)
+      end
+    end
+
+    def buildpack_models
+      if self.buildpack_lifecycle_buildpacks.present?
+        self.buildpack_lifecycle_buildpacks.map do |buildpack|
+          Buildpack.find(name: buildpack.name) || CustomBuildpack.new(buildpack.name)
+        end
+      else
+        [legacy_buildpack_model]
       end
     end
 

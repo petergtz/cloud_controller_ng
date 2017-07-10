@@ -177,18 +177,20 @@ module VCAP::CloudController
       describe 'buildpack' do
         let(:app) { App.make }
 
-        it 'does allow nil value' do
+        it 'allows nil value' do
           app.app.lifecycle_data.update(buildpacks: nil)
           expect {
             app.save
           }.to_not raise_error
+          expect(app.buildpack).to eq(AutoDetectionBuildpack.new)
         end
 
-        it 'does allow a public url' do
+        it 'allows a public url' do
           app.app.lifecycle_data.update(buildpacks: ['git://user@github.com/repo.git'])
           expect {
             app.save
           }.to_not raise_error
+          expect(app.buildpack).to eq(CustomBuildpack.new('git://user@github.com/repo.git'))
         end
 
         it 'allows a public http url' do
@@ -196,6 +198,7 @@ module VCAP::CloudController
           expect {
             app.save
           }.to_not raise_error
+          expect(app.buildpack).to eq(CustomBuildpack.new('http://example.com/foo'))
         end
 
         it 'allows a buildpack name' do
@@ -206,6 +209,7 @@ module VCAP::CloudController
           }.to_not raise_error
 
           expect(app.legacy_buildpack).to eql(admin_buildpack)
+          expect(app.buildpack).to eql(admin_buildpack)
         end
 
         it 'does not allow a non-url string' do

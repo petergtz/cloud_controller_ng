@@ -159,6 +159,55 @@ module VCAP::CloudController
       end
     end
 
+    describe '#buildpack_models' do
+      context 'when no buildpack is set' do
+        before { lifecycle_data.buildpacks = nil }
+
+        it 'returns an array with a single AutoDetectionBuildpack' do
+          expect(lifecycle_data.buildpack_models).to eq([AutoDetectionBuildpack.new])
+        end
+      end
+
+      context 'when the buildspacks are a mixture of admin and custom buildpacks' do
+        let(:admin_buildpack) { Buildpack.make(name: 'minbari') }
+        let(:buildpack_url) { 'http://example.com/buildpack1' }
+
+        before do
+          lifecycle_data.buildpacks = [admin_buildpack.name, buildpack_url]
+        end
+
+        it 'returns an array of corresponding buildpack objects' do
+          expect(lifecycle_data.buildpack_models).to eq([admin_buildpack, CustomBuildpack.new(buildpack_url)])
+        end
+      end
+
+      context 'when the buildpack is set via the legacy_* fields' do
+        context 'when the buildpack is an admin buildpack' do
+          let(:admin_buildpack) { Buildpack.make(name: 'susperia') }
+
+          before do
+            lifecycle_data.legacy_admin_buildpack_name = admin_buildpack.name
+          end
+
+          it 'returns an array of 1 Buildpack' do
+            expect(lifecycle_data.buildpack_models).to eq([admin_buildpack])
+          end
+        end
+
+        context 'when the buildpack is a custom buildpack' do
+          let(:buildpack_url) { 'http://example.org/wedgemount' }
+
+          before do
+            lifecycle_data.legacy_buildpack_url = buildpack_url
+          end
+
+          it 'returns an array of 1 Custom Buildpack' do
+            expect(lifecycle_data.buildpack_models).to eq([CustomBuildpack.new(buildpack_url)])
+          end
+        end
+      end
+    end
+
     describe '#legacy_buildpack_model' do
       let!(:admin_buildpack) { Buildpack.make(name: 'bob') }
 
@@ -192,7 +241,6 @@ module VCAP::CloudController
 
     describe '#using_custom_buildpack?' do
       context 'when using a custom buildpack' do
-
         context 'when using a single-instance legacy buildpack' do
           subject(:lifecycle_data) { BuildpackLifecycleDataModel.new }
 
@@ -200,7 +248,6 @@ module VCAP::CloudController
             lifecycle_data.legacy_buildpack_url = 'https://someurl.com'
             expect(lifecycle_data.using_custom_buildpack?).to eq true
           end
-
         end
 
         context 'when using mutiple buildpacks' do

@@ -464,7 +464,7 @@ RSpec.describe AppsV3Controller, type: :controller do
 
         context 'buildpack app' do
           before do
-            app_model.lifecycle_data.stack     = 'some-stack-name'
+            app_model.lifecycle_data.stack = 'some-stack-name'
             app_model.lifecycle_data.buildpacks = ['some-buildpack-name']
             app_model.lifecycle_data.save
           end
