@@ -168,16 +168,19 @@ module VCAP::CloudController
         end
       end
 
-      context 'when the buildspacks are a mixture of admin and custom buildpacks' do
+      context 'when the buildpacks are a mixture of admin and custom buildpacks' do
         let(:admin_buildpack) { Buildpack.make(name: 'minbari') }
-        let(:buildpack_url) { 'http://example.com/buildpack1' }
+        let(:buildpack1_url) { 'http://example.com/buildpack1' }
+        let(:buildpack2_url) { 'http://example.com/buildpack2' }
 
         before do
-          lifecycle_data.buildpacks = [admin_buildpack.name, buildpack_url]
+          lifecycle_data.buildpacks = [admin_buildpack.name, buildpack1_url, buildpack2_url]
         end
 
         it 'returns an array of corresponding buildpack objects' do
-          expect(lifecycle_data.buildpack_models).to eq([admin_buildpack, CustomBuildpack.new(buildpack_url)])
+          expect(lifecycle_data.buildpack_models).to eq([admin_buildpack,
+                                                         CustomBuildpack.new(buildpack1_url),
+                                                         CustomBuildpack.new(buildpack2_url)])
         end
       end
 
@@ -280,7 +283,7 @@ module VCAP::CloudController
         end
       end
 
-      context 'when using mutiple buildpacks' do
+      context 'when using multiple buildpacks' do
         context 'and there are custom buildpacks' do
           subject(:lifecycle_data) {
             BuildpackLifecycleDataModel.new(buildpacks: ['ruby', 'https://github.com/buildpacks/the-best'])
