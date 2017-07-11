@@ -41,8 +41,7 @@ class AppPackager
   end
 
   # TODO: Add comment on why this exists!!
-  def fix_subdir_permissions(destination_zip)
-    FileUtils.cp(@path, destination_zip)
+  def fix_subdir_permissions
     dirs_to_remove = []
     Zip::File.open(@path) do |in_zip|
       in_zip.each do |entry|
@@ -52,34 +51,13 @@ class AppPackager
       end
     end
 
-    unless dirs_to_remove.empty?
-      i = 0
-      z = []
-      dirs_to_remove.each do |d|
-        i += 1
-        z << d
+    dirs_to_remove.each_slice(10) do |directory_slice|
+      stdout, error, status = Open3.capture3(
+        %(zip -d "#{Shellwords.escape(@path)}" #{directory_slice.join(' ')}),
+      )
 
-        if i > 10
-          stdout, error, status = Open3.capture3(
-            %(zip -d #{Shellwords.escape(destination_zip)} #{z.join(' ')}),
-          )
-
-          unless status.success?
-            raise "potato: Could not remove the directories from\n STDOUT: \"#{stdout}\"\n STDERR: \"#{error}\""
-          end
-          i = 0
-          z = []
-        end
-      end
-
-      unless z.empty?
-        stdout, error, status = Open3.capture3(
-          %(zip -d "#{Shellwords.escape(destination_zip)}" #{z.join(' ')}),
-        )
-
-        unless status.success?
-          raise "potato: SPECIAL Could not remove the directories from\n STDOUT: \"#{stdout}\"\n STDERR: \"#{error}\""
-        end
+      unless status.success?
+        raise %(Could not remove the directories from\n STDOUT: "#{stdout}"\n STDERR: "#{error}")
       end
     end
   rescue Zip::Error => e

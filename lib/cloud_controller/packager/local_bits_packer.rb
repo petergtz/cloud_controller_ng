@@ -11,7 +11,10 @@ module CloudController
         FileUtils.chmod('u+w', uploaded_package_zip)
 
         Dir.mktmpdir('local_bits_packer', tmp_dir) do |root_path|
-          app_packager = AppPackager.new(uploaded_package_zip)
+          app_package_zip = File.join(root_path, 'copied_app_package.zip')
+          FileUtils.cp(uploaded_package_zip, app_package_zip)
+
+          app_packager = AppPackager.new(app_package_zip)
 
           # unzip app contents & upload to blobstore
           app_contents_path = File.join(root_path, 'application_contents')
@@ -27,16 +30,14 @@ module CloudController
           end
           app_packager.append_dir_contents(cached_resources_dir)
 
-          destination_zip = File.join(root_path, 'final.zip')
-          app_packager.fix_subdir_permissions(destination_zip)
-
+          app_packager.fix_subdir_permissions
           validate_size!(app_packager)
 
-          package_blobstore.cp_to_blobstore(destination_zip, blobstore_key)
+          package_blobstore.cp_to_blobstore(app_package_zip, blobstore_key)
 
           {
-            sha1:   Digester.new.digest_path(destination_zip),
-            sha256: Digester.new(algorithm: Digest::SHA256).digest_path(destination_zip),
+            sha1:   Digester.new.digest_path(app_package_zip),
+            sha256: Digester.new(algorithm: Digest::SHA256).digest_path(app_package_zip),
           }
         end
       end

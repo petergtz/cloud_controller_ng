@@ -124,21 +124,23 @@ RSpec.describe AppPackager do
   end
 
   describe '#fix_subdir_permissions' do
-    let(:input_zip) { File.join(@tmpdir, 'good.zip') }
-    let(:destination_zip) { File.join(@tmpdir, 'destination_zip.zip') }
+    let(:input_zip) { File.join(@tmpdir, 'many_dirs.zip') }
 
-    before { FileUtils.cp(File.join(Paths::FIXTURES, 'good.zip'), input_zip) }
+    before { FileUtils.cp(File.join(Paths::FIXTURES, 'app_packager_zips', 'many_dirs.zip'), input_zip) }
 
     it 'removes directory entries' do
-      app_packager.fix_subdir_permissions(destination_zip)
+      app_packager.fix_subdir_permissions
 
-      output = `zipinfo #{destination_zip}`
+      output = `zipinfo #{input_zip}`
 
-      expect(output).to include 'bye'
-      expect(output).to include 'hi'
-      expect(output).to include 'subdir/greeting'
+      expect(output).to include 'empty_root_file_1'
+      expect(output).to include 'empty_root_file_2'
 
-      expect(output).to include '3 files'
+      (0..20).each do |i|
+        expect(output).to include("folder_#{i}/empty_file")
+      end
+
+      expect(output).to include '23 files'
     end
   end
 end
