@@ -38,25 +38,6 @@ module VCAP::CloudController
     alias_method :legacy_admin_buildpack_name, :admin_buildpack_name
     alias_method :legacy_admin_buildpack_name=, :admin_buildpack_name=
 
-    # def buildpack=(buildpack)
-    #   self.buildpack_url        = nil
-    #   self.admin_buildpack_name = nil
-    #
-    #   if UriUtils.is_uri?(buildpack)
-    #     self.buildpack_url = buildpack
-    #   else
-    #     self.admin_buildpack_name = buildpack
-    #   end
-    # end
-
-    def buildpack_helper(buildpack)
-      if UriUtils.is_uri?(buildpack)
-        { buildpack_url: buildpack, admin_buildpack_name: nil }
-      else
-        { buildpack_url: nil, admin_buildpack_name: buildpack }
-      end
-    end
-
     def buildpacks
       if self.buildpack_lifecycle_buildpacks.present?
         self.buildpack_lifecycle_buildpacks.map(&:name)
@@ -79,6 +60,7 @@ module VCAP::CloudController
     def buildpacks=(new_buildpacks)
       new_buildpacks ||= []
       first_buildpack = new_buildpacks.first
+      # During the rolling-deploy transition period, update both old and new columns
       if UriUtils.is_uri?(first_buildpack)
         self.legacy_buildpack_url = first_buildpack
       else
@@ -87,8 +69,7 @@ module VCAP::CloudController
 
       # http://sequel.jeremyevans.net/rdoc-plugins/classes/Sequel/Plugins/NestedAttributes.html
       buildpacks_to_remove = self.buildpack_lifecycle_buildpacks.map { |bp| { id: bp.id, _delete: true } }
-      # buildpacks_to_add = new_buildpacks.map { |buildpack_url| {buildpack_url: buildpack_url} }
-      buildpacks_to_add = new_buildpacks.map { |buildpack_url| buildpack_helper(buildpack_url) }
+      buildpacks_to_add = new_buildpacks.map { |buildpack_url| attributes_from_name(buildpack_url) }
       self.buildpack_lifecycle_buildpacks_attributes = buildpacks_to_add + buildpacks_to_remove
     end
 
@@ -123,6 +104,14 @@ module VCAP::CloudController
     end
 
     private
+
+    def attributes_from_name(name)
+      if UriUtils.is_uri?(name)
+        { buildpack_url: name, admin_buildpack_name: nil }
+      else
+        { buildpack_url: nil, admin_buildpack_name: name }
+      end
+    end
 
     def legacy_buildpack
       return self.legacy_admin_buildpack_name if self.legacy_admin_buildpack_name.present?

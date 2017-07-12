@@ -1570,6 +1570,10 @@ module VCAP::CloudController
               expect(app.ports).to be nil
             end
 
+            it 'returns an auto-detect buildpack' do
+              expect(app.buildpack).to eq(AutoDetectionBuildpack.new)
+            end
+
             it 'does not save ports to the database' do
               expect(app.user_provided_ports).to be_nil
             end

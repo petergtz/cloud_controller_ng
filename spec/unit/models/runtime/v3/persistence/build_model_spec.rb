@@ -61,6 +61,14 @@ module VCAP::CloudController
 
         expect(build_model.lifecycle_data).to be_a(DockerLifecycleDataModel)
       end
+
+      context 'buildpack dependencies' do
+        it 'deletes the dependent buildpack_lifecycle_data_models when a build is deleted' do
+          expect {
+            build_model.destroy
+          }.to change { BuildpackLifecycleDataModel.count }.by(-1)
+        end
+      end
     end
 
     describe '#staged?' do

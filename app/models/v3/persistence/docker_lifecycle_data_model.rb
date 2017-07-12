@@ -3,7 +3,6 @@ require 'cloud_controller/diego/lifecycles/lifecycles'
 module VCAP::CloudController
   class DockerLifecycleDataModel
     LIFECYCLE_TYPE = Lifecycles::DOCKER
-
     def legacy_buildpack_model
       AutoDetectionBuildpack.new
     end
@@ -13,7 +12,7 @@ module VCAP::CloudController
     end
 
     def buildpack_models
-      []
+      [AutoDetectionBuildpack.new]
     end
 
     def using_custom_buildpack?
