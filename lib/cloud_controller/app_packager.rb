@@ -5,6 +5,8 @@ require 'zip'
 require 'zip/filesystem'
 
 class AppPackager
+  DIRECTORY_DELETE_BATCH_SIZE = 10
+
   attr_reader :path
 
   def initialize(zip_path)
@@ -13,7 +15,6 @@ class AppPackager
 
   def unzip(destination_dir)
     raise CloudController::Errors::ApiError.new_from_details('AppBitsUploadInvalid', 'Destination does not exist') unless File.directory?(destination_dir)
-    raise CloudController::Errors::ApiError.new_from_details('AppBitsUploadInvalid', 'Zip not found') unless File.exist?(@path)
     raise CloudController::Errors::ApiError.new_from_details('AppBitsUploadInvalid', 'Symlink(s) point outside of root folder') if any_outside_symlinks?(destination_dir)
 
     output, error, status = Open3.capture3(
@@ -40,61 +41,79 @@ class AppPackager
     end
   end
 
-  # TODO: Add comment on why this exists!!
   def fix_subdir_permissions
-    dirs_to_remove = []
-    Zip::File.open(@path) do |in_zip|
-      in_zip.each do |entry|
-        if entry.name[-1] == '/'
-          dirs_to_remove << entry.name
-        end
-      end
-    end
-
-    dirs_to_remove.each_slice(10) do |directory_slice|
-      stdout, error, status = Open3.capture3(
-        %(zip -d "#{Shellwords.escape(@path)}" #{directory_slice.join(' ')}),
-      )
-
-      unless status.success?
-        raise %(Could not remove the directories from\n STDOUT: "#{stdout}"\n STDERR: "#{error}")
-      end
-    end
-  rescue Zip::Error => e
-    raise CloudController::Errors::ApiError.new_from_details('AppBitsUploadInvalid', "Invalid zip archive. Error: #{e.message}")
+    dirs_from_zip = get_dirs_from_zip(@path)
+    remove_dirs_from_zip(@path, dirs_from_zip)
+    add_dirs_to_zip(@path, dirs_from_zip)
+  rescue Zip::Error
+    invalid_zip!
   end
 
   def size
-    size = 0
     Zip::File.open(@path) do |in_zip|
-      in_zip.each do |entry|
-        size += entry.size
-      end
+      in_zip.reduce(0) { |memo, entry| memo + entry.size }
     end
-
-    size
-  rescue Zip::Error => e
-    raise CloudController::Errors::ApiError.new_from_details('AppBitsUploadInvalid', "Invalid zip archive. Error: #{e.message}")
+  rescue Zip::Error
+    invalid_zip!
   end
 
   private
 
+  def get_dirs_from_zip(zip_path)
+    Zip::File.open(zip_path) do |in_zip|
+      in_zip.select { |entry| is_dir?(entry) }
+    end
+  end
+
+  def is_dir?(entry)
+    entry.name[-1] == '/'
+  end
+
+  def remove_dirs_from_zip(zip_path, dirs_from_zip)
+    dirs_from_zip.each_slice(DIRECTORY_DELETE_BATCH_SIZE) do |directory_slice|
+      remove_dir(zip_path, directory_slice)
+    end
+  end
+
+  def remove_dir(zip_path, directory_slice)
+    stdout, error, status = Open3.capture3(
+      %(zip -d "#{Shellwords.escape(zip_path)}" #{directory_slice.join(' ')}),
+    )
+
+    unless status.success?
+      raise %(Could not remove the directories from\n STDOUT: "#{stdout}"\n STDERR: "#{error}")
+    end
+  end
+
+  def add_dirs_to_zip(zip_path, dirs_to_fix)
+    Zip::File.open(zip_path) do |in_zip|
+      dirs_to_fix.each { |dir| in_zip.mkdir(dir) }
+    end
+  end
+
   def any_outside_symlinks?(destination_dir)
     Zip::File.open(@path) do |in_zip|
-      in_zip.each do |entry|
-        if entry.ftype == :symlink
-          symlink = in_zip.file.read(entry.name)
-          return true unless VCAP::CloudController::FilePathChecker.safe_path?(symlink, destination_dir)
-        end
+      in_zip.any? do |entry|
+        symlink?(entry) && !safe_path?(in_zip.file.read(entry.name), destination_dir)
       end
     end
+  rescue Zip::Error
+    invalid_zip!
+  end
 
-    false
-  rescue Zip::Error => e
-    raise CloudController::Errors::ApiError.new_from_details('AppBitsUploadInvalid', "Invalid zip archive. Error: #{e.message}")
+  def symlink?(entry)
+    entry.ftype == :symlink
+  end
+
+  def safe_path?(path, destination_dir)
+    VCAP::CloudController::FilePathChecker.safe_path?(path, destination_dir)
   end
 
   def empty_directory?(dir)
     (Dir.entries(dir) - %w(.. .)).empty?
+  end
+
+  def invalid_zip!
+    raise CloudController::Errors::ApiError.new_from_details('AppBitsUploadInvalid', 'Invalid zip archive.')
   end
 end

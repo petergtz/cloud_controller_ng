@@ -24,6 +24,15 @@ module CloudController::Packager
       )
     end
 
+    let(:fingerprints) do
+      path = File.join(local_tmp_dir, 'content')
+      sha  = 'some_fake_sha'
+      File.open(path, 'w') { |f| f.write 'content' }
+      global_app_bits_cache.cp_to_blobstore(path, sha)
+
+      [{ 'fn' => 'path/to/content.txt', 'size' => 123, 'sha1' => sha }]
+    end
+
     before do
       allow(packer).to receive(:tmp_dir).and_return(local_tmp_dir)
       allow(packer).to receive(:package_blobstore).and_return(package_blobstore)
@@ -31,7 +40,7 @@ module CloudController::Packager
       allow(packer).to receive(:max_package_size).and_return(max_package_size)
 
       FileUtils.cp(input_zip, local_tmp_dir)
-      FileUtils.chmod(0400, uploaded_files_path)
+      FileUtils.chmod(0400, uploaded_files_path) rescue nil
 
       Fog.unmock!
     end
@@ -67,7 +76,53 @@ module CloudController::Packager
         })
       end
 
-      context 'when the zip file uploaded is invalid' do
+      context 'when the package zip file path is nil' do
+        let(:uploaded_files_path) { nil }
+
+        context 'and there are NO cached files' do
+          let(:cached_files_fingerprints) { [] }
+
+          it 'raises an error' do
+            expect {
+              packer.send_package_to_blobstore(blobstore_key, uploaded_files_path, cached_files_fingerprints)
+            }.to raise_error(CloudController::Errors::ApiError, /Invalid zip/)
+          end
+        end
+
+        context 'and there are cached files' do
+          let(:cached_files_fingerprints) { fingerprints }
+
+          it 'packs a zip with the cached files' do
+            packer.send_package_to_blobstore(blobstore_key, uploaded_files_path, cached_files_fingerprints)
+            expect(package_blobstore.exists?(blobstore_key)).to be true
+          end
+        end
+      end
+
+      context 'when the package zip file is missing ' do
+        let(:uploaded_files_path) { File.join(local_tmp_dir, 'file_that_does_not_exist.zip') }
+
+        context 'and there are NO cached files' do
+          let(:cached_files_fingerprints) { [] }
+
+          it 'raises an error' do
+            expect {
+              packer.send_package_to_blobstore(blobstore_key, uploaded_files_path, cached_files_fingerprints)
+            }.to raise_error(CloudController::Errors::ApiError, /Invalid zip/)
+          end
+        end
+
+        context 'and there are cached files' do
+          let(:cached_files_fingerprints) { fingerprints }
+
+          it 'packs a zip with the cached files' do
+            packer.send_package_to_blobstore(blobstore_key, uploaded_files_path, cached_files_fingerprints)
+            expect(package_blobstore.exists?(blobstore_key)).to be true
+          end
+        end
+      end
+
+      context 'when the zip file is invalid' do
         let(:input_zip) { File.join(Paths::FIXTURES, 'bad.zip') }
         let(:uploaded_files_path) { File.join(local_tmp_dir, 'bad.zip') }
 
@@ -89,14 +144,7 @@ module CloudController::Packager
       end
 
       describe 'bit caching' do
-        let(:cached_files_fingerprints) do
-          path = File.join(local_tmp_dir, 'content')
-          sha  = 'some_fake_sha'
-          File.open(path, 'w') { |f| f.write 'content' }
-          global_app_bits_cache.cp_to_blobstore(path, sha)
-
-          [{ 'fn' => 'path/to/content.txt', 'size' => 123, 'sha1' => sha }]
-        end
+        let(:cached_files_fingerprints) { fingerprints }
 
         it 'uploads the new app bits to the app bit cache' do
           packer.send_package_to_blobstore(blobstore_key, uploaded_files_path, cached_files_fingerprints)
@@ -142,12 +190,7 @@ module CloudController::Packager
 
           context 'when specific file permissions are requested' do
             let(:cached_files_fingerprints) do
-              path = File.join(local_tmp_dir, 'content')
-              sha  = 'some_fake_sha'
-              File.open(path, 'w') { |f| f.write 'content' }
-              global_app_bits_cache.cp_to_blobstore(path, sha)
-
-              [{ 'fn' => 'path/to/content.txt', 'size' => 123, 'sha1' => sha, 'mode' => mode }]
+              fingerprints.tap { |prints| prints[0]['mode'] = mode }
             end
 
             let(:mode) { '0653' }

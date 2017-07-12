@@ -39,16 +39,6 @@ RSpec.describe AppPackager do
       end
     end
 
-    context 'when zip does not exist' do
-      let(:input_zip) { 'missing_zip' }
-
-      it 'raises an exception' do
-        expect {
-          app_packager.unzip(@tmpdir)
-        }.to raise_exception(CloudController::Errors::ApiError, /Zip not found/i)
-      end
-    end
-
     context 'when the zip is empty' do
       let(:input_zip) { File.join(Paths::FIXTURES, 'empty.zip') }
 
@@ -109,6 +99,16 @@ RSpec.describe AppPackager do
 
       it 'results in the existing zip' do
         Dir.mkdir(additional_files_path)
+
+        output = `zipinfo #{input_zip}`
+
+        expect(output).to include 'bye'
+        expect(output).to include 'hi'
+        expect(output).to include 'subdir/'
+        expect(output).to include 'subdir/greeting'
+
+        expect(output).to include '4 files'
+
         app_packager.append_dir_contents(additional_files_path)
 
         output = `zipinfo #{input_zip}`
@@ -124,23 +124,39 @@ RSpec.describe AppPackager do
   end
 
   describe '#fix_subdir_permissions' do
-    let(:input_zip) { File.join(@tmpdir, 'many_dirs.zip') }
+    context 'when there are many directories' do
+      let(:input_zip) { File.join(@tmpdir, 'many_dirs.zip') }
 
-    before { FileUtils.cp(File.join(Paths::FIXTURES, 'app_packager_zips', 'many_dirs.zip'), input_zip) }
+      before { FileUtils.cp(File.join(Paths::FIXTURES, 'app_packager_zips', 'many_dirs.zip'), input_zip) }
 
-    it 'removes directory entries' do
-      app_packager.fix_subdir_permissions
+      it 'batches the directory deletes so it does not exceed the max command length' do
+        allow(Open3).to receive(:capture3).and_call_original
+        app_packager.fix_subdir_permissions
 
-      output = `zipinfo #{input_zip}`
+        output = `zipinfo #{input_zip}`
 
-      expect(output).to include 'empty_root_file_1'
-      expect(output).to include 'empty_root_file_2'
+        (0..20).each do |i|
+          expect(output).to include("folder_#{i}/")
+          expect(output).to include("folder_#{i}/empty_file")
+        end
 
-      (0..20).each do |i|
-        expect(output).to include("folder_#{i}/empty_file")
+        expect((21.0 / AppPackager::DIRECTORY_DELETE_BATCH_SIZE).ceil).to eq(3)
+        expect(Open3).to have_received(:capture3).exactly(3).times
       end
+    end
 
-      expect(output).to include '23 files'
+    context 'when the zip has directories without the directory attribute or execute permission (it was created on windows)' do
+      let(:input_zip) { File.join(@tmpdir, 'bad_directory_permissions.zip') }
+
+      before { FileUtils.cp(File.join(Paths::FIXTURES, 'app_packager_zips', 'bad_directory_permissions.zip'), input_zip) }
+
+      it 'adds the directory and execute bits' do
+        expect(`zipinfo #{input_zip}`).to match %r(-rw--.*fat.*META-INF/)
+
+        app_packager.fix_subdir_permissions
+
+        expect(`zipinfo #{input_zip}`).to match %r(drwxr-xr-x.*unx.*META-INF/)
+      end
     end
   end
 end
