@@ -7,7 +7,7 @@ module VCAP::CloudController
     let(:app_obj) { AppModel.make(name: 'app-1', space: space) }
     let(:instance1) { UserProvidedServiceInstance.make(space: app_obj.space) }
     let(:instance2) { UserProvidedServiceInstance.make(space: app_obj.space) }
-    let!(:binding_with_drain1) { ServiceBinding.make(syslog_drain_url: 'fishfinger', app: app_obj, service_instance: instance1) }
+    let!(:binding_with_drain1) { ServiceBinding.make(syslog_drain_url: 'drain', app: app_obj, service_instance: instance1) }
     let!(:binding_with_drain2) { ServiceBinding.make(syslog_drain_url: 'foobar', app: app_obj, service_instance: instance2) }
 
     describe 'GET /internal/v4/syslog_drain_urls' do

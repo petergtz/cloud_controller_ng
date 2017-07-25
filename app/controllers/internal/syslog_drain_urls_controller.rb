@@ -5,6 +5,8 @@ module VCAP::CloudController
 
     get '/internal/v4/syslog_drain_urls', :list
     def list
+      # group_concat_max_leng = AppModel.db["GET SESSION group_concat_max_len"]
+      # AppModel.db["SET SESSION group_concat_max_len = 1000000000"]
       guid_to_drain_maps = AppModel.
                            join(ServiceBinding, app_guid: :guid).
                            join(Space, guid: :apps__space_guid).
@@ -42,6 +44,9 @@ module VCAP::CloudController
       next_page_token = last_id + batch_size unless guid_to_drain_maps.empty?
 
       [HTTP::OK, {}, MultiJson.dump({ results: drain_urls, next_id: next_page_token }, pretty: true)]
+
+    # ensure
+    #   AppModel.db["SET SESSION group_concat_max_len = 255"]
     end
 
     private
