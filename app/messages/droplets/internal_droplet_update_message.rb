@@ -2,20 +2,20 @@ require 'messages/base_message'
 require 'messages/checksum'
 
 module VCAP::CloudController
-  class InternalPackageUpdateMessage < BaseMessage
+  class InternalDropletUpdateMessage < BaseMessage
     ALLOWED_KEYS = [:state, :checksums, :error].freeze
 
     attr_accessor(*ALLOWED_KEYS)
 
     def self.create_from_http_request(body)
-      InternalPackageUpdateMessage.new(body.deep_symbolize_keys)
+      InternalDropletUpdateMessage.new(body.deep_symbolize_keys)
     end
 
     validates_with NoAdditionalKeysValidator
 
     validate :requested_state
     validates :error, length: { in: 1..500, message: 'must be between 1 and 500 characters', allow_nil: true }
-    validates :checksums, presence: { message: 'required when setting state to READY' }, if: :requested_ready?
+    validates :checksums, presence: { message: 'required when setting state to STAGED' }, if: :requested_staged?
     validate :checksums_data, if: :requested_checksum?
 
     def sha1
@@ -35,13 +35,13 @@ module VCAP::CloudController
     end
 
     def requested_state
-      unless [PackageModel::PENDING_STATE, PackageModel::READY_STATE, PackageModel::FAILED_STATE].include?(state)
-        errors.add(:state, 'must be one of PROCESSING_UPLOAD, READY, FAILED')
+      unless [DropletModel::STAGED_STATE, DropletModel::FAILED_STATE].include?(state)
+        errors.add(:state, 'must be one of STAGED or FAILED')
       end
     end
 
-    def requested_ready?
-      state == PackageModel::READY_STATE
+    def requested_staged?
+      state == DropletModel::STAGED_STATE
     end
 
     def requested_checksum?
