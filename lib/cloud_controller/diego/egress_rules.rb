@@ -3,33 +3,43 @@ module VCAP::CloudController
     class EgressRules
       def staging(app_guid:)
         space = VCAP::CloudController::AppModel.find(guid: app_guid).space
-        staging_security_groups = space.staging_security_groups
-        order_rules(staging_security_groups.map(&:rules).flatten)
+        group_rules(space.staging_security_groups)
       end
 
       def running(process)
-        order_rules(process.space.security_groups.map(&:rules).flatten)
+        group_rules(process.space.security_groups)
       end
 
       private
 
-      def order_rules(rules)
-        logging_rules = []
-        normal_rules = []
-
-        rules.each do |rule|
-          rule = transform_rule(rule)
-          rule['log'] ? logging_rules << rule : normal_rules << rule
+      def group_rules(security_groups)
+        rules_hash = {}
+        security_groups.each do |security_group|
+          security_group.rules.each do |rule|
+            rules_hash[rule] ||= []
+            rules_hash[rule] << security_group.guid
+          end
         end
+
+        rules = rules_hash.map do |rule, security_group_guids|
+          transform_rule(rule, security_group_guids)
+        end
+        order_rules(rules)
+      end
+
+      def order_rules(rules)
+        logging_rules = rules.select{|rule| rule['log']}
+        normal_rules = rules.select{|rule| !rule['log']}
 
         normal_rules | logging_rules
       end
 
-      def transform_rule(rule)
+      def transform_rule(rule, security_group_guids)
         protocol = rule['protocol']
         template = {
           'protocol' => protocol,
           'destinations' => [rule['destination']],
+          'annotations' => security_group_guids.map {|guid| "security_group_id:#{guid}"},
         }
 
         case protocol
