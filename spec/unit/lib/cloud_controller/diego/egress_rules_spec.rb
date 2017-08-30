@@ -65,7 +65,7 @@ module VCAP::CloudController
 
           it 'creates annotations with the guids for the default security group and the space security group' do
             expect(egress_rules.staging(app_guid: process.app.guid)).to include(
-              { 'protocol' => 'udp', 'port_range' => { 'start' => 8080, 'end' => 9090 }, 'destinations' => ['198.41.191.47/1'], 'annotations' => ['security_group_id:guid1', 'security_group_id:guid2'] },
+              { 'protocol' => 'udp', 'port_range' => { 'start' => 8080, 'end' => 9090 }, 'destinations' => ['198.41.191.47/1'], 'annotations' => ['security_group_id:guid1', 'security_group_id:guid6'] },
             )
           end
         end
@@ -97,7 +97,6 @@ module VCAP::CloudController
           expect(logged).to have(1).items
         end
 
-        ##TODO: I only see docs on adding a security group to a space or adding a 'staging' security group to a space. Is there such thing as adding a runnign security group to a space?
         context 'when the app space has running security groups with the same rule as default running' do
           before do
             security_group = SecurityGroup.make(guid: 'guid4', rules: sg_default_rules_1, running_default: false)
@@ -106,11 +105,10 @@ module VCAP::CloudController
 
           it 'creates annotations with the guids for the default security group and the space security group' do
             expect(egress_rules.running(process)).to include(
-              { 'protocol' => 'udp', 'port_range' => { 'start' => 8080, 'end' => 9090 }, 'destinations' => ['198.41.191.47/1'], 'annotations' => ['security_group_id:guid1', 'security_group_id:guid7'] },
+              { 'protocol' => 'udp', 'ports' => [8080], 'destinations' => ['198.41.191.47/1'], 'annotations' => ['security_group_id:guid1', 'security_group_id:guid4'] },
             )
           end
         end
-
       end
     end
   end
