@@ -198,7 +198,7 @@ module VCAP::CloudController
             )
           end
           let(:config) do
-            {
+            Config.new({
               diego: {
                 use_privileged_containers_for_running: false,
                 lifecycle_bundles:                     {
@@ -206,7 +206,7 @@ module VCAP::CloudController
                 },
                 pid_limit: 100,
               }
-            }
+            })
           end
           let(:expected_cached_dependencies) do
             [
@@ -345,7 +345,7 @@ module VCAP::CloudController
             context 'when the health_check_timeout is not set on process' do
               before do
                 process.update(health_check_timeout: nil)
-                config.merge!(default_health_check_timeout: 12345)
+                config.set(:default_health_check_timeout, 12345)
               end
 
               it 'falls back to the default located in the config' do
@@ -734,11 +734,11 @@ module VCAP::CloudController
 
         context 'when the lifecycle_type is "docker"' do
           let(:config) do
-            {
+            Config.new({
               diego: {
                 pid_limit: 100,
               }
-            }
+            })
           end
           let(:lifecycle_type) { :docker }
           let(:package) { PackageModel.make(lifecycle_type, app: app_model) }
@@ -845,7 +845,7 @@ module VCAP::CloudController
           context 'when the health_check_timeout is not set on process' do
             before do
               process.update(health_check_timeout: nil)
-              config.merge!(default_health_check_timeout: 12345)
+              config.set(:default_health_check_timeout, 12345)
             end
 
             it 'falls back to the default located in the config' do
@@ -952,7 +952,7 @@ module VCAP::CloudController
       end
 
       describe '#build_app_lrp_update' do
-        let(:config) { {} }
+        let(:config) { Config.new({}) }
         let(:app_model) { AppModel.make(:buildpack, guid: 'app-guid', droplet: DropletModel.make(state: 'STAGED')) }
         let(:process) do
           process = ProcessModel.make(:process, instances: 7, app: app_model)

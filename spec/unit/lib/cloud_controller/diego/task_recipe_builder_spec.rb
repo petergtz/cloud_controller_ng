@@ -30,7 +30,7 @@ module VCAP::CloudController
         end
         let(:package) { PackageModel.make(app: app) }
         let(:config) do
-          {
+          Config.new({
             tls_port: tls_port,
             internal_service_hostname: internal_service_hostname,
             internal_api: {
@@ -45,7 +45,7 @@ module VCAP::CloudController
               stager_url: 'http://stager.example.com',
               pid_limit: 100,
             },
-          }
+          })
         end
         let(:isolation_segment) { 'potato-segment' }
         let(:internal_service_hostname) { 'internal.awesome.sauce' }
@@ -325,7 +325,7 @@ module VCAP::CloudController
         end
 
         let(:config) do
-          {
+          Config.new({
             external_port: external_port,
             tls_port: tls_port,
             internal_service_hostname: internal_service_hostname,
@@ -339,7 +339,7 @@ module VCAP::CloudController
               use_privileged_containers_for_running: false,
               temporary_local_tps: true,
             },
-          }
+          })
         end
         let(:isolation_segment) { 'potato-segment' }
         let(:internal_service_hostname) { 'internal.awesome.sauce' }
@@ -503,14 +503,14 @@ module VCAP::CloudController
 
           describe 'privileged' do
             it 'is false when it is false in the config' do
-              config[:diego][:use_privileged_containers_for_running] = false
+              config.set(:diego, config.get(:diego).merge(use_privileged_containers_for_running: false))
 
               result = task_recipe_builder.build_app_task(config, task)
               expect(result.privileged).to be(false)
             end
 
             it 'is true when it is true in the config' do
-              config[:diego][:use_privileged_containers_for_running] = true
+              config.set(:diego, config.get(:diego).merge(use_privileged_containers_for_running: true))
 
               result = task_recipe_builder.build_app_task(config, task)
               expect(result.privileged).to be(true)
@@ -647,14 +647,14 @@ module VCAP::CloudController
 
           describe 'privileged' do
             it 'is false when it is false in the config' do
-              config[:diego][:use_privileged_containers_for_running] = false
+              config.set(:diego, config.get(:diego).merge(use_privileged_containers_for_running: false))
 
               result = task_recipe_builder.build_app_task(config, task)
               expect(result.privileged).to be(false)
             end
 
             it 'is true when it is true in the config' do
-              config[:diego][:use_privileged_containers_for_running] = true
+              config.set(:diego, config.get(:diego).merge(use_privileged_containers_for_running: true))
 
               result = task_recipe_builder.build_app_task(config, task)
               expect(result.privileged).to be(true)
