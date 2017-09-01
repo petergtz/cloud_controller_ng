@@ -1799,19 +1799,20 @@ RSpec.describe AppsV3Controller, type: :controller do
     let(:user) { VCAP::CloudController::User.make }
     let(:ssh_enabled) { { 'name' => 'ssh', 'description' => 'Enable SSHing into the app.', 'enabled' => true } }
     let(:ssh_disabled) { { 'name' => 'ssh', 'description' => 'Enable SSHing into the app.', 'enabled' => false } }
-    role_to_expected_http_response = {
-      'admin'               => 200,
-      'admin_read_only'     => 200,
-      'global_auditor'      => 200,
-      'space_developer'     => 200,
-      'space_manager'       => 200,
-      'space_auditor'       => 200,
-      'org_manager'         => 200,
-      'org_auditor'         => 404,
-      'org_billing_manager' => 404,
-    }.freeze
 
     describe '#feature/ssh' do
+      role_to_expected_http_response = {
+        'admin'               => 200,
+        'admin_read_only'     => 200,
+        'global_auditor'      => 200,
+        'space_developer'     => 200,
+        'space_manager'       => 200,
+        'space_auditor'       => 200,
+        'org_manager'         => 200,
+        'org_auditor'         => 404,
+        'org_billing_manager' => 404,
+      }.freeze
+
       role_to_expected_http_response.each do |role, expected_return_value|
         context "as an #{role}" do
           it "returns #{expected_return_value} for features/ssh" do
@@ -1836,6 +1837,47 @@ RSpec.describe AppsV3Controller, type: :controller do
           expect(parsed_body).to eq(ssh_disabled)
         end
       end
+    end
+
+    describe 'PATCH #feature/ssh' do
+      role_to_expected_http_response = {
+        'admin'               => 200,
+        'admin_read_only'     => 403,
+        'global_auditor'      => 403,
+        'space_developer'     => 200,
+        'space_manager'       => 403,
+        'space_auditor'       => 403,
+        'org_manager'         => 403,
+        'org_auditor'         => 404,
+        'org_billing_manager' => 404,
+      }.freeze
+      req_body = { enabled: false }
+
+      role_to_expected_http_response.each do |role, expected_return_value|
+        context "as an #{role}" do
+          it "returns #{expected_return_value} for features/ssh" do
+            set_current_user_as_role(role: role, org: org, space: space, user: user)
+
+            patch :feature, guid: app_model.guid, name: 'ssh', body: req_body
+
+            expect(response.status).to eq(expected_return_value), "role #{role}: expected  #{expected_return_value}, got: #{response.status}"
+            if expected_return_value == 200
+              expect(parsed_body['name']).to eq('ssh')
+              expect(parsed_body['enabled']).to eq(false)
+            end
+          end
+        end
+      end
+
+      # context 'enable_ssh is false' do
+      #   let(:app_model) { VCAP::CloudController::AppModel.make(enable_ssh: false) }
+      #
+      #   it 'returns enabled false' do
+      #     set_current_user_as_role(role: 'admin', org: nil, space: nil, user: user)
+      #     get :feature, guid: app_model.guid, name: 'ssh'
+      #     expect(parsed_body).to eq(ssh_disabled)
+      #   end
+      # end
     end
 
     describe '#feature/404' do
