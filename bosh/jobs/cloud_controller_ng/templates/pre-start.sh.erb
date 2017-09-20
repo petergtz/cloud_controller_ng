@@ -16,7 +16,7 @@ export BUNDLE_GEMFILE="${CC_PACKAGE_DIR}/cloud_controller_ng/Gemfile"
 
 source ${CC_JOB_DIR}/bin/setup_local_blobstore.sh
 
-source "${SCRIPT_DIR}/ruby_version.sh"
+source /var/vcap/packages/ruby-2.4/bosh/runtime.env
 
 function setup_nginx_directories {
   mkdir -p "/var/vcap/sys/run/nginx_cc"

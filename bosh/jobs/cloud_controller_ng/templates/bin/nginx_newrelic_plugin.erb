@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-source /var/vcap/jobs/cloud_controller_ng/bin/ruby_version.sh
+source /var/vcap/packages/ruby-2.4/bosh/runtime.env
 
 cd /var/vcap/packages/nginx_newrelic_plugin
 exec /var/vcap/packages/nginx_newrelic_plugin/newrelic_nginx_agent

@@ -13,7 +13,6 @@ templates:
   newrelic.yml.erb: config/newrelic.yml
   drain.sh.erb: bin/drain
   stacks.yml.erb: config/stacks.yml
-  ruby_version.sh.erb: bin/ruby_version.sh
   console.erb: bin/console
   blobstore_waiter.sh.erb: bin/blobstore_waiter.sh
   pre-start.sh.erb: bin/pre-start
@@ -34,7 +33,7 @@ packages:
   - nginx_newrelic_plugin
   - libpq
   - mariadb_connector_c
-  - ruby-2.3
+  - ruby-2.4
 
 consumes:
 - name: database

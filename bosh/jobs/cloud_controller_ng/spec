@@ -37,7 +37,6 @@ templates:
   public_upload.conf.erb: config/public_upload.conf
   resource_pool_ca_cert.pem.erb: config/certs/resource_pool_ca_cert.pem
   restart_drain.rb: bin/restart_drain
-  ruby_version.sh.erb: bin/ruby_version.sh
   seed_db.sh.erb: bin/seed_db
   setup_local_blobstore.sh.erb: bin/setup_local_blobstore.sh
   stacks.yml.erb: config/stacks.yml
@@ -52,7 +51,7 @@ packages:
   - nginx_newrelic_plugin
   - libpq
   - mariadb_connector_c
-  - ruby-2.3
+  - ruby-2.4
 
 provides:
 - name: cloud_controller
